@@ -5,12 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"gitwatcher/internal/config"
+	gitInternal "gitwatcher/internal/git"
 	"log"
-	"strings"
 
 	git "github.com/go-git/go-git/v6"
-	"github.com/go-git/go-git/v6/plumbing/transport"
-	githttp "github.com/go-git/go-git/v6/plumbing/transport/http"
 )
 
 func PullRepo(ctx context.Context, cfg config.Config) error {
@@ -18,7 +16,7 @@ func PullRepo(ctx context.Context, cfg config.Config) error {
 		return fmt.Errorf("repository path is empty")
 	}
 
-	authMethod, err := buildAuthMethod(cfg)
+	authMethod, err := gitInternal.BuildAuthMethod(cfg)
 	if err != nil {
 		return err
 	}
@@ -31,7 +29,7 @@ func PullRepo(ctx context.Context, cfg config.Config) error {
 		return fmt.Errorf("open repository %q: %w", cfg.RepositoryPath, err)
 	}
 	log.Println("Opened repository at", cfg.RepositoryPath)
-	defer closeRepo(repo)
+	defer gitInternal.CloseRepo(repo)
 
 	fetchErr := repo.FetchContext(ctx, &git.FetchOptions{RemoteName: "origin", Auth: authMethod})
 	if fetchErr != nil {
@@ -54,27 +52,4 @@ func PullRepo(ctx context.Context, cfg config.Config) error {
 	log.Println("Pulled repository at", cfg.RepositoryPath)
 
 	return nil
-}
-
-func closeRepo(repo *git.Repository) {
-	if repo == nil {
-		return
-	}
-	if err := repo.Close(); err != nil {
-		log.Println("close repository:", err)
-	}
-}
-
-func buildAuthMethod(cfg config.Config) (transport.AuthMethod, error) {
-	switch strings.ToLower(cfg.AuthType) {
-	case "", strings.ToLower(config.AuthTypeNone):
-		return nil, nil
-	case strings.ToLower(config.AuthTypeHTTP):
-		if cfg.AuthUser == "" || cfg.AuthPassword == "" {
-			return nil, fmt.Errorf("AUTH_TYPE=HTTP requires AUTH_USER and AUTH_PASSWORD")
-		}
-		return &githttp.BasicAuth{Username: cfg.AuthUser, Password: cfg.AuthPassword}, nil
-	default:
-		return nil, fmt.Errorf("unsupported AUTH_TYPE %q, expected %q or %q", cfg.AuthType, config.AuthTypeNone, config.AuthTypeHTTP)
-	}
 }

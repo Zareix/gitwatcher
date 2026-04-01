@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -15,13 +16,16 @@ const (
 )
 
 type Config struct {
-	PullerJobCron  string
-	PullerJobUUID  uuid.UUID
+	WatcherJobCron string
+	WatcherJobUUID uuid.UUID
 	RepositoryPath string
 	Port           int
 	AuthType       string
 	AuthUser       string
 	AuthPassword   string
+	CommitName     string
+	CommitEmail    string
+	CommitMessage  string
 }
 
 func LoadConfig() Config {
@@ -43,9 +47,9 @@ func LoadConfig() Config {
 		log.Fatalf("Invalid PORT value: %v", err)
 	}
 
-	pullerJobCronSchedule, exists := os.LookupEnv("PULLER_JOB_CRON")
+	cronSchedule, exists := os.LookupEnv("CRON")
 	if !exists {
-		pullerJobCronSchedule = "* */5 * * * *"
+		cronSchedule = "0 */1 * * * *"
 	}
 
 	authType, exists := os.LookupEnv("AUTH_TYPE")
@@ -53,22 +57,41 @@ func LoadConfig() Config {
 		authType = AuthTypeNone
 	}
 
-	pullerJobUUID, err := uuid.NewUUID()
+	commitName, exists := os.LookupEnv("COMMIT_NAME")
+	if !exists || commitName == "" {
+		commitName = "gitwatcher"
+	}
+
+	commitEmail, exists := os.LookupEnv("COMMIT_EMAIL")
+	if !exists || commitEmail == "" {
+		commitEmail = "gitwatcher@local"
+	}
+
+	defaultCommitMessage := "chore: sync changes from gitwatcher"
+	commitMessage := strings.TrimSpace(os.Getenv("COMMIT_MESSAGE"))
+	if commitMessage == "" {
+		commitMessage = defaultCommitMessage
+	}
+
+	jobUUID, err := uuid.NewUUID()
 	if err != nil {
 		log.Fatal(err)
 	}
-	pullerJobUUIDEnv, exists := os.LookupEnv("PULLER_JOB_UUID")
+	jobUUIDEnv, exists := os.LookupEnv("JOB_UUID")
 	if exists {
-		pullerJobUUID = uuid.MustParse(pullerJobUUIDEnv)
+		jobUUID = uuid.MustParse(jobUUIDEnv)
 	}
 
 	return Config{
-		PullerJobCron:  pullerJobCronSchedule,
-		PullerJobUUID:  pullerJobUUID,
+		WatcherJobCron: cronSchedule,
+		WatcherJobUUID: jobUUID,
 		RepositoryPath: repositoryPath,
 		Port:           port,
 		AuthType:       authType,
 		AuthUser:       os.Getenv("AUTH_USER"),
 		AuthPassword:   os.Getenv("AUTH_PASSWORD"),
+		CommitName:     commitName,
+		CommitEmail:    commitEmail,
+		CommitMessage:  commitMessage,
 	}
 }
