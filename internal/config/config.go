@@ -20,12 +20,19 @@ type Config struct {
 	WatcherJobUUID uuid.UUID
 	RepositoryPath string
 	Port           int
-	AuthType       string
-	AuthUser       string
-	AuthPassword   string
-	CommitName     string
-	CommitEmail    string
-	CommitMessage  string
+
+	AuthType     string
+	AuthUser     string
+	AuthPassword string
+
+	IntegrationArcaneUrl       string
+	IntegrationArcaneToken     string
+	IntegrationArcaneEnvId     string
+	IntegrationArcaneSkipNames []string
+
+	CommitName    string
+	CommitEmail   string
+	CommitMessage string
 }
 
 func LoadConfig() Config {
@@ -73,6 +80,8 @@ func LoadConfig() Config {
 		commitMessage = defaultCommitMessage
 	}
 
+	skipNames := parseCommaSeparatedEnv("INTEGRATION_ARCANE_SKIP_NAMES")
+
 	jobUUID, err := uuid.NewUUID()
 	if err != nil {
 		log.Fatal(err)
@@ -87,11 +96,46 @@ func LoadConfig() Config {
 		WatcherJobUUID: jobUUID,
 		RepositoryPath: repositoryPath,
 		Port:           port,
-		AuthType:       authType,
-		AuthUser:       os.Getenv("AUTH_USER"),
-		AuthPassword:   os.Getenv("AUTH_PASSWORD"),
-		CommitName:     commitName,
-		CommitEmail:    commitEmail,
-		CommitMessage:  commitMessage,
+
+		AuthType:     authType,
+		AuthUser:     os.Getenv("AUTH_USER"),
+		AuthPassword: os.Getenv("AUTH_PASSWORD"),
+
+		IntegrationArcaneUrl:       os.Getenv("INTEGRATION_ARCANE_URL"),
+		IntegrationArcaneToken:     os.Getenv("INTEGRATION_ARCANE_TOKEN"),
+		IntegrationArcaneEnvId:     os.Getenv("INTEGRATION_ARCANE_ENV_ID"),
+		IntegrationArcaneSkipNames: skipNames,
+
+		CommitName:    commitName,
+		CommitEmail:   commitEmail,
+		CommitMessage: commitMessage,
 	}
+}
+
+func parseCommaSeparatedEnv(key string) []string {
+	raw := os.Getenv(key)
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+
+	parts := strings.Split(raw, ",")
+	values := make([]string, 0, len(parts))
+	seen := make(map[string]struct{}, len(parts))
+	for _, part := range parts {
+		name := strings.ToLower(strings.TrimSpace(part))
+		if name == "" {
+			continue
+		}
+		if _, exists := seen[name]; exists {
+			continue
+		}
+		seen[name] = struct{}{}
+		values = append(values, name)
+	}
+
+	if len(values) == 0 {
+		return nil
+	}
+
+	return values
 }

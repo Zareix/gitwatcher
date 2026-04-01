@@ -4,8 +4,7 @@ import (
 	"context"
 	"fmt"
 	"gitwatcher/internal/config"
-	"gitwatcher/internal/puller"
-	"gitwatcher/internal/pusher"
+	"gitwatcher/internal/watcher"
 	"log"
 	"net/http"
 
@@ -13,7 +12,7 @@ import (
 	"github.com/go-co-op/gocron/v2"
 )
 
-const Version = "1.1.1"
+const Version = "1.2.0"
 
 func main() {
 	ctx := context.Background()
@@ -58,12 +57,7 @@ func setupWatcherJob(ctx context.Context, cfg config.Config, scheduler gocron.Sc
 func runWatcherJob(ctx context.Context, cfg config.Config) {
 	log.Println("Running Gitwatcher job...")
 
-	err := puller.PullRepo(ctx, cfg)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = pusher.PushRepo(ctx, cfg)
+	err := watcher.RunWatcher(ctx, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}

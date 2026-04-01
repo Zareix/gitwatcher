@@ -1,4 +1,4 @@
-package pusher
+package watcher
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"gitwatcher/internal/config"
 	gitInternal "gitwatcher/internal/git"
+	"gitwatcher/internal/integrations"
 	"log"
 	"time"
 
@@ -13,7 +14,7 @@ import (
 	"github.com/go-git/go-git/v6/plumbing/object"
 )
 
-func PushRepo(ctx context.Context, cfg config.Config) error {
+func RunWatcher(ctx context.Context, cfg config.Config) error {
 	if cfg.RepositoryPath == "" {
 		return fmt.Errorf("repository path is empty")
 	}
@@ -30,7 +31,7 @@ func PushRepo(ctx context.Context, cfg config.Config) error {
 		}
 		return fmt.Errorf("open repository %q: %w", cfg.RepositoryPath, err)
 	}
-	log.Println("Opened repository at", cfg.RepositoryPath)
+	log.Println("Opened repository")
 	defer gitInternal.CloseRepo(repo)
 
 	worktree, err := repo.Worktree()
@@ -48,7 +49,18 @@ func PushRepo(ctx context.Context, cfg config.Config) error {
 		return fmt.Errorf("get repository status: %w", err)
 	}
 	if status.IsClean() {
-		log.Println("No local changes detected, skipping push for", cfg.RepositoryPath)
+		log.Println("No local changes detected, skipping push and pulling instead")
+
+		err := worktree.PullContext(ctx, &git.PullOptions{RemoteName: "origin", Auth: authMethod})
+		if err != nil {
+			if errors.Is(err, git.NoErrAlreadyUpToDate) {
+				log.Println("No changes detected on remote, skipping pull")
+				return nil
+			}
+			return fmt.Errorf("pull from origin failed: %w", err)
+		}
+		log.Println("Pulled repository")
+		integrations.TriggerAllIntegrations(cfg)
 		return nil
 	}
 
@@ -65,7 +77,7 @@ func PushRepo(ctx context.Context, cfg config.Config) error {
 	}); err != nil {
 		return fmt.Errorf("commit changes: %w", err)
 	}
-	log.Println("Committed local changes for", cfg.RepositoryPath)
+	log.Println("Committed local changes")
 
 	if err := worktree.PullContext(ctx, &git.PullOptions{RemoteName: "origin", Auth: authMethod}); err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
 		return fmt.Errorf("pull from origin failed: %w", err)
@@ -73,12 +85,12 @@ func PushRepo(ctx context.Context, cfg config.Config) error {
 
 	if err := repo.PushContext(ctx, &git.PushOptions{RemoteName: "origin", Auth: authMethod}); err != nil {
 		if errors.Is(err, git.NoErrAlreadyUpToDate) {
-			log.Println("Remote already up to date, skipping push for", cfg.RepositoryPath)
+			log.Println("Remote already up to date, skipping push")
 			return nil
 		}
 		return fmt.Errorf("push to origin failed: %w", err)
 	}
-	log.Println("Pushed repository at", cfg.RepositoryPath)
+	log.Println("Pushed repository")
 
 	return nil
 }
