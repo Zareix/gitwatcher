@@ -38,6 +38,11 @@ func PushRepo(ctx context.Context, cfg config.Config) error {
 		return fmt.Errorf("get repository worktree: %w", err)
 	}
 
+	fetchErr := repo.FetchContext(ctx, &git.FetchOptions{RemoteName: "origin", Auth: authMethod})
+	if fetchErr != nil && !errors.Is(fetchErr, git.NoErrAlreadyUpToDate) {
+		return fmt.Errorf("fetch from origin failed: %w", fetchErr)
+	}
+
 	status, err := worktree.Status()
 	if err != nil {
 		return fmt.Errorf("get repository status: %w", err)
@@ -61,6 +66,10 @@ func PushRepo(ctx context.Context, cfg config.Config) error {
 		return fmt.Errorf("commit changes: %w", err)
 	}
 	log.Println("Committed local changes for", cfg.RepositoryPath)
+
+	if err := worktree.PullContext(ctx, &git.PullOptions{RemoteName: "origin", Auth: authMethod}); err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
+		return fmt.Errorf("pull from origin failed: %w", err)
+	}
 
 	if err := repo.PushContext(ctx, &git.PushOptions{RemoteName: "origin", Auth: authMethod}); err != nil {
 		if errors.Is(err, git.NoErrAlreadyUpToDate) {

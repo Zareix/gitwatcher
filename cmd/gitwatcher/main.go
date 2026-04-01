@@ -13,7 +13,7 @@ import (
 	"github.com/go-co-op/gocron/v2"
 )
 
-const Version = "1.1.0"
+const Version = "1.1.1"
 
 func main() {
 	ctx := context.Background()
