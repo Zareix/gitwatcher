@@ -1,7 +1,7 @@
 package config
 
 import (
-	"log"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -13,6 +13,9 @@ import (
 const (
 	AuthTypeNone = "None"
 	AuthTypeHTTP = "HTTP"
+
+	DivergencePolicyManual = "manual"
+	DivergencePolicyRebase = "rebase"
 )
 
 type Config struct {
@@ -33,11 +36,17 @@ type Config struct {
 	CommitName    string
 	CommitEmail   string
 	CommitMessage string
+
+	DivergencePolicy string
 }
 
 func LoadConfig() Config {
 	if err := godotenv.Load(); err != nil {
-		log.Println("Could not load .env file, proceeding with environment variables")
+	}
+
+	logJson := os.Getenv("LOG_JSON")
+	if strings.ToLower(logJson) == "true" {
+		slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 	}
 
 	repositoryPath, exists := os.LookupEnv("REPOSITORY_PATH")
@@ -51,7 +60,8 @@ func LoadConfig() Config {
 	}
 	port, err := strconv.Atoi(portEnv)
 	if err != nil {
-		log.Fatalf("Invalid PORT value: %v", err)
+		slog.Error("Invalid PORT value, must be an integer", "error", err)
+		os.Exit(1)
 	}
 
 	cronSchedule, exists := os.LookupEnv("CRON")
@@ -80,11 +90,21 @@ func LoadConfig() Config {
 		commitMessage = defaultCommitMessage
 	}
 
+	divergencePolicy := strings.ToLower(strings.TrimSpace(os.Getenv("DIVERGENCE_POLICY")))
+	if divergencePolicy == "" {
+		divergencePolicy = DivergencePolicyManual
+	}
+	if divergencePolicy != DivergencePolicyManual && divergencePolicy != DivergencePolicyRebase {
+		slog.Warn("Invalid DIVERGENCE_POLICY value, falling back to manual", "value", divergencePolicy)
+		divergencePolicy = DivergencePolicyManual
+	}
+
 	skipNames := parseCommaSeparatedEnv("INTEGRATION_ARCANE_SKIP_NAMES")
 
 	jobUUID, err := uuid.NewUUID()
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("Failed to generate job UUID", "error", err)
+		os.Exit(1)
 	}
 	jobUUIDEnv, exists := os.LookupEnv("JOB_UUID")
 	if exists {
@@ -109,6 +129,8 @@ func LoadConfig() Config {
 		CommitName:    commitName,
 		CommitEmail:   commitEmail,
 		CommitMessage: commitMessage,
+
+		DivergencePolicy: divergencePolicy,
 	}
 }
 

@@ -2,15 +2,15 @@ package integrations
 
 import (
 	"gitwatcher/internal/config"
-	"log"
+	"log/slog"
 )
 
 func TriggerAllIntegrations(cfg config.Config) {
-	log.Println("Triggering integrations")
-	
+	slog.Info("Triggering integrations")
+
 	if cfg.IntegrationArcaneUrl != "" && cfg.IntegrationArcaneToken != "" && cfg.IntegrationArcaneEnvId != "" {
 		if err := RunArcaneIntegration(cfg.IntegrationArcaneUrl, cfg.IntegrationArcaneToken, cfg.IntegrationArcaneEnvId, cfg.IntegrationArcaneSkipNames); err != nil {
-			log.Printf("Arcane integration failed: %v", err)
+			slog.Error("Arcane integration failed", "error", err)
 		}
 	}
 }

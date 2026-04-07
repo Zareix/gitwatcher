@@ -1,9 +1,11 @@
 package git
 
 import (
+	"context"
 	"fmt"
 	"gitwatcher/internal/config"
-	"log"
+	"log/slog"
+	"os/exec"
 	"strings"
 
 	"github.com/go-git/go-git/v6"
@@ -16,7 +18,7 @@ func CloseRepo(repo *git.Repository) {
 		return
 	}
 	if err := repo.Close(); err != nil {
-		log.Println("close repository:", err)
+		slog.Error("Could not close repository", "repo", repo)
 	}
 }
 
@@ -32,4 +34,28 @@ func BuildAuthMethod(cfg config.Config) (transport.AuthMethod, error) {
 	default:
 		return nil, fmt.Errorf("unsupported AUTH_TYPE %q, expected %q or %q", cfg.AuthType, config.AuthTypeNone, config.AuthTypeHTTP)
 	}
+}
+
+func RebaseBranchOnOrigin(ctx context.Context, repositoryPath string, branchName string) error {
+	if _, err := runGitCommand(ctx, repositoryPath, "pull", "--rebase", "origin", branchName); err != nil {
+		_, _ = runGitCommand(ctx, repositoryPath, "rebase", "--abort")
+		return fmt.Errorf("rebase local branch %q on origin failed: %w", branchName, err)
+	}
+	return nil
+}
+
+func runGitCommand(ctx context.Context, repositoryPath string, args ...string) (string, error) {
+	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd.Dir = repositoryPath
+
+	output, err := cmd.CombinedOutput()
+	outputText := strings.TrimSpace(string(output))
+	if err != nil {
+		if outputText == "" {
+			return "", fmt.Errorf("git %s failed: %w", strings.Join(args, " "), err)
+		}
+		return "", fmt.Errorf("git %s failed: %w: %s", strings.Join(args, " "), err, outputText)
+	}
+
+	return outputText, nil
 }

@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	neturl "net/url"
 	"strings"
@@ -37,7 +37,7 @@ type ArcaneResponsePagination struct {
 }
 
 func RunArcaneIntegration(url string, token string, envId string, skipProjectNames []string) error {
-	log.Println("[Arcane integration] starting redeploy of projects in environment", envId)
+	slog.Info("Starting redeploy of projects in environment", "environment", envId)
 
 	ctx := context.Background()
 
@@ -78,7 +78,7 @@ func RunArcaneIntegration(url string, token string, envId string, skipProjectNam
 		return err
 	}
 
-	log.Println("[Arcane integration] completed redeploy of", totalProjects, "projects in environment", envId)
+	slog.Info("Completed redeploy of projects in environment", "environment", envId, "projects", totalProjects)
 
 	return nil
 }

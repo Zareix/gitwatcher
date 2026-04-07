@@ -5,14 +5,15 @@ import (
 	"fmt"
 	"gitwatcher/internal/config"
 	"gitwatcher/internal/watcher"
-	"log"
+	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/go-co-op/gocron-ui/server"
 	"github.com/go-co-op/gocron/v2"
 )
 
-const Version = "1.2.0"
+const Version = "1.3.0"
 
 func main() {
 	ctx := context.Background()
@@ -20,21 +21,26 @@ func main() {
 
 	scheduler, err := gocron.NewScheduler()
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("Failed to create scheduler", "error", err)
+		os.Exit(1)
 	}
 
 	setupWatcherJob(ctx, cfg, scheduler)
 
 	if len(scheduler.Jobs()) == 0 {
-		log.Println("No backup jobs scheduled. Exiting.")
+		slog.Info("No backup jobs scheduled. Exiting.")
 		return
 	}
 
 	scheduler.Start()
 
 	srv := server.NewServer(scheduler, cfg.Port, server.WithTitle("Gitwatcher Scheduler"))
-	log.Printf("Gitwatcher available at http://localhost:%d", cfg.Port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), srv.Router))
+	slog.Info("Starting server", "port", cfg.Port)
+	err = http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), srv.Router)
+	if err != nil {
+		slog.Error("Failed to start server", "error", err)
+		os.Exit(1)
+	}
 }
 
 func setupWatcherJob(ctx context.Context, cfg config.Config, scheduler gocron.Scheduler) {
@@ -44,21 +50,23 @@ func setupWatcherJob(ctx context.Context, cfg config.Config, scheduler gocron.Sc
 			gocron.NewTask(runWatcherJob, ctx, cfg),
 			gocron.WithName("Watcher Job"),
 			gocron.WithIdentifier(cfg.WatcherJobUUID),
+			gocron.WithSingletonMode(gocron.LimitModeReschedule),
 		)
 		if err != nil {
-			log.Fatal(err)
+			slog.Error("Failed to schedule Watcher Job", "error", err)
+			os.Exit(1)
 		}
-		log.Println("Scheduled Watcher Job with cron:", cfg.WatcherJobCron)
+		slog.Info("Scheduled Watcher Job", "cron", cfg.WatcherJobCron)
 	}
 
 	runWatcherJob(ctx, cfg)
 }
 
 func runWatcherJob(ctx context.Context, cfg config.Config) {
-	log.Println("Running Gitwatcher job...")
+	slog.Info("Running Gitwatcher job...")
 
 	err := watcher.RunWatcher(ctx, cfg)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("Gitwatcher job failed", "error", err)
 	}
 }
