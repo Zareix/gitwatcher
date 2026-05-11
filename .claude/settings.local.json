@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -n \"type TreeEntry\\\\|ToOSFileMode\\\\|func.*FileMode\\\\|FileMode\" \\\\ *)",
+      "Bash(grep -n \"merkletrie\" \\\\ *)",
+      "Bash(grep -n \"Remove\\\\|MkdirAll\\\\|OpenFile\" \\\\ *)",
+      "Bash(grep -n \"func.*BlobObject\\\\|func.*Blob\" \\\\ *)",
+      "Bash(go doc *)"
+    ]
+  }
+}

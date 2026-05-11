@@ -11,7 +11,9 @@ COPY . .
 RUN go build -o /app/gitwatcher ./cmd/gitwatcher
 
 
-FROM gcr.io/distroless/static-debian12 AS runner
+FROM alpine:3.23.4 AS runner
+
+RUN apk add --no-cache git ca-certificates
 
 COPY --from=builder /app/gitwatcher /app/gitwatcher
 
