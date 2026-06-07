@@ -33,6 +33,9 @@ type Config struct {
 	IntegrationArcaneEnvId     string
 	IntegrationArcaneSkipNames []string
 
+	IntegrationWebhookUrl   string
+	IntegrationWebhookToken string
+
 	CommitName    string
 	CommitEmail   string
 	CommitMessage string
@@ -99,7 +102,7 @@ func LoadConfig() Config {
 		divergencePolicy = DivergencePolicyManual
 	}
 
-	skipNames := parseCommaSeparatedEnv("INTEGRATION_ARCANE_SKIP_NAMES")
+	arcaneSkipNames := parseCommaSeparatedEnv("INTEGRATION_ARCANE_SKIP_NAMES")
 
 	jobUUID, err := uuid.NewUUID()
 	if err != nil {
@@ -124,7 +127,10 @@ func LoadConfig() Config {
 		IntegrationArcaneUrl:       os.Getenv("INTEGRATION_ARCANE_URL"),
 		IntegrationArcaneToken:     os.Getenv("INTEGRATION_ARCANE_TOKEN"),
 		IntegrationArcaneEnvId:     os.Getenv("INTEGRATION_ARCANE_ENV_ID"),
-		IntegrationArcaneSkipNames: skipNames,
+		IntegrationArcaneSkipNames: arcaneSkipNames,
+
+		IntegrationWebhookUrl:   os.Getenv("INTEGRATION_WEBHOOK_URL"),
+		IntegrationWebhookToken: os.Getenv("INTEGRATION_WEBHOOK_TOKEN"),
 
 		CommitName:    commitName,
 		CommitEmail:   commitEmail,
