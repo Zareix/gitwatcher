@@ -8,7 +8,7 @@ require (
 	github.com/go-git/go-git/v6 v6.0.0-20260331140939-8126d61b3452
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
-	golang.org/x/sync v0.19.0
+	golang.org/x/sync v0.21.0
 )
 
 require (
