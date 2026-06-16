@@ -11,7 +11,7 @@ COPY . .
 RUN go build -o /app/gitwatcher ./cmd/gitwatcher
 
 
-FROM alpine:3.23.4 AS runner
+FROM alpine:3.24.1 AS runner
 
 RUN apk add --no-cache git ca-certificates
 
