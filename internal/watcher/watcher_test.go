@@ -80,6 +80,8 @@ func TestRunWatcherDivergedRebasePolicyRebasesAndPushes(t *testing.T) {
 	cfg := config.Config{
 		RepositoryPath:   setup.localPath,
 		DivergencePolicy: config.DivergencePolicyRebase,
+		CommitName:       "Test User",
+		CommitEmail:      "test@example.com",
 	}
 
 	if err := RunWatcher(context.Background(), cfg); err != nil {
