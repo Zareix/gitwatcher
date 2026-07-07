@@ -110,7 +110,7 @@ func RunWatcher(ctx context.Context, cfg config.Config) error {
 			switch cfg.DivergencePolicy {
 			case config.DivergencePolicyRebase:
 				slog.Info("Local and remote branches diverged, attempting rebase", "repository", cfg.RepositoryPath, "branch", branchName)
-				if err := gitInternal.RebaseBranchOnOrigin(ctx, cfg.RepositoryPath, branchName, cfg.CommitName, cfg.CommitEmail); err != nil {
+				if err := gitInternal.RebaseBranchOnOrigin(ctx, cfg.RepositoryPath, branchName, cfg.CommitName, cfg.CommitEmail, cfg); err != nil {
 					return err
 				}
 				slog.Info("Rebase completed, pushing rebased commits", "repository", cfg.RepositoryPath, "branch", branchName)
