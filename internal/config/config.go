@@ -44,8 +44,7 @@ type Config struct {
 }
 
 func LoadConfig() Config {
-	if err := godotenv.Load(); err != nil {
-	}
+	_ = godotenv.Load()
 
 	logJson := os.Getenv("LOG_JSON")
 	if strings.ToLower(logJson) == "true" {

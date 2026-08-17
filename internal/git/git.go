@@ -32,7 +32,7 @@ func ensureAskPassScript() (string, error) {
 			askPassErr = err
 			return
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		if _, err := f.WriteString(askPassScript); err != nil {
 			askPassErr = err
 			return

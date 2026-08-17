@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	neturl "net/url"
+	"slices"
 	"strings"
 	"sync/atomic"
 
@@ -54,7 +55,6 @@ func RunArcaneIntegration(url string, token string, envId string, skipProjectNam
 		redeployGroup, redeployCtx := errgroup.WithContext(groupCtx)
 		redeployGroup.SetLimit(16)
 		for _, project := range projects {
-			project := project
 			if shouldSkipProject(project.Name, project.Status, skipProjectNames) {
 				continue
 			}
@@ -144,7 +144,7 @@ func fetchArcanePage[T any](ctx context.Context, baseURL string, token string, e
 
 	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
 		body, _ := io.ReadAll(io.LimitReader(res.Body, 1024))
-		return ArcanePaginatedResponse[T]{}, fmt.Errorf("Arcane %s API returned %d: %s", entityName, res.StatusCode, strings.TrimSpace(string(body)))
+		return ArcanePaginatedResponse[T]{}, fmt.Errorf("arcane %s API returned %d: %s", entityName, res.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	var response ArcanePaginatedResponse[T]
@@ -154,7 +154,7 @@ func fetchArcanePage[T any](ctx context.Context, baseURL string, token string, e
 	}
 
 	if !response.Success {
-		return ArcanePaginatedResponse[T]{}, fmt.Errorf("Arcane %s response indicates failure", entityName)
+		return ArcanePaginatedResponse[T]{}, fmt.Errorf("arcane %s response indicates failure", entityName)
 	}
 
 	return response, nil
@@ -180,7 +180,7 @@ func redeployArcaneProject(ctx context.Context, baseURL string, token string, en
 
 	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
 		body, _ := io.ReadAll(io.LimitReader(res.Body, 1024))
-		return fmt.Errorf("Arcane redeploy API returned %d: %s", res.StatusCode, strings.TrimSpace(string(body)))
+		return fmt.Errorf("arcane redeploy API returned %d: %s", res.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	return nil
@@ -190,13 +190,5 @@ func shouldSkipProject(name string, status string, skipNames []string) bool {
 	if status != "running" {
 		return true
 	}
-	if len(skipNames) == 0 {
-		return false
-	}
-	for _, skipName := range skipNames {
-		if name == skipName {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(skipNames, name)
 }
