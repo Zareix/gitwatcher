@@ -1,6 +1,6 @@
 module gitwatcher
 
-go 1.26.1
+go 1.27.1
 
 require (
 	github.com/go-git/go-git/v6 v6.0.0-alpha.5.0.20260926105804-1b122021c5d6
