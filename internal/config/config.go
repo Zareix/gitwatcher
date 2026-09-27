@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -23,7 +22,6 @@ type Config struct {
 	WatcherJobCron string
 	WatcherJobUUID uuid.UUID
 	RepositoryPath string
-	Port           int
 
 	AuthType     string
 	AuthUser     string
@@ -49,15 +47,6 @@ func LoadConfig() (Config, error) {
 	repositoryPath := os.Getenv("REPOSITORY_PATH")
 	if repositoryPath == "" {
 		repositoryPath = "./output"
-	}
-
-	port := 8080
-	if portEnv := os.Getenv("PORT"); portEnv != "" {
-		parsed, err := strconv.Atoi(portEnv)
-		if err != nil {
-			return Config{}, fmt.Errorf("invalid PORT value %q, must be an integer: %w", portEnv, err)
-		}
-		port = parsed
 	}
 
 	cronSchedule := os.Getenv("CRON")
@@ -110,7 +99,6 @@ func LoadConfig() (Config, error) {
 		WatcherJobCron: cronSchedule,
 		WatcherJobUUID: jobUUID,
 		RepositoryPath: repositoryPath,
-		Port:           port,
 
 		AuthType:     authType,
 		AuthUser:     os.Getenv("AUTH_USER"),

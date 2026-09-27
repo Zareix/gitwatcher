@@ -7,7 +7,7 @@ import (
 )
 
 func TestLoadConfigDefaults(t *testing.T) {
-	for _, key := range []string{"REPOSITORY_PATH", "PORT", "CRON", "AUTH_TYPE", "COMMIT_NAME", "COMMIT_EMAIL", "COMMIT_MESSAGE", "DIVERGENCE_POLICY", "JOB_UUID", "LOG_JSON"} {
+	for _, key := range []string{"REPOSITORY_PATH", "CRON", "AUTH_TYPE", "COMMIT_NAME", "COMMIT_EMAIL", "COMMIT_MESSAGE", "DIVERGENCE_POLICY", "JOB_UUID", "LOG_JSON"} {
 		t.Setenv(key, "")
 	}
 
@@ -18,9 +18,6 @@ func TestLoadConfigDefaults(t *testing.T) {
 
 	if cfg.RepositoryPath != "./output" {
 		t.Fatalf("RepositoryPath = %q, want %q", cfg.RepositoryPath, "./output")
-	}
-	if cfg.Port != 8080 {
-		t.Fatalf("Port = %d, want 8080", cfg.Port)
 	}
 	if cfg.WatcherJobCron != "0 */1 * * * *" {
 		t.Fatalf("WatcherJobCron = %q, want %q", cfg.WatcherJobCron, "0 */1 * * * *")
@@ -42,14 +39,6 @@ func TestLoadConfigDefaults(t *testing.T) {
 	}
 	if cfg.WatcherJobUUID == uuid.Nil {
 		t.Fatal("WatcherJobUUID should be randomly generated when JOB_UUID is unset")
-	}
-}
-
-func TestLoadConfigInvalidPort(t *testing.T) {
-	t.Setenv("PORT", "not-a-number")
-
-	if _, err := LoadConfig(); err == nil {
-		t.Fatal("expected error for invalid PORT")
 	}
 }
 
