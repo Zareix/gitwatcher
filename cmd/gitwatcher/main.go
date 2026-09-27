@@ -14,7 +14,7 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-const Version = "1.8.1"
+const Version = "1.8.2"
 
 const jobRunTimeout = 10 * time.Minute
 

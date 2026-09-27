@@ -40,7 +40,7 @@ type Config struct {
 func LoadConfig() (Config, error) {
 	_ = godotenv.Load()
 
-	if strings.ToLower(os.Getenv("LOG_JSON")) == "true" {
+	if strings.ToLower(os.Getenv("LOG_FORMAT")) == "json" {
 		slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 	}
 

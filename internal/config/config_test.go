@@ -7,7 +7,7 @@ import (
 )
 
 func TestLoadConfigDefaults(t *testing.T) {
-	for _, key := range []string{"REPOSITORY_PATH", "CRON", "AUTH_TYPE", "COMMIT_NAME", "COMMIT_EMAIL", "COMMIT_MESSAGE", "DIVERGENCE_POLICY", "JOB_UUID", "LOG_JSON"} {
+	for _, key := range []string{"REPOSITORY_PATH", "CRON", "AUTH_TYPE", "COMMIT_NAME", "COMMIT_EMAIL", "COMMIT_MESSAGE", "DIVERGENCE_POLICY", "JOB_UUID", "LOG_FORMAT"} {
 		t.Setenv(key, "")
 	}
 
