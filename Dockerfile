@@ -8,22 +8,26 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o /app/gitwatcher ./cmd/gitwatcher
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /app/gitwatcher ./cmd/gitwatcher
 
 
 FROM alpine:3.24.1 AS runner
 
-RUN apk add --no-cache git ca-certificates
+RUN apk add --no-cache git ca-certificates wget \
+    && addgroup -S gitwatcher \
+    && adduser -S -G gitwatcher gitwatcher
 
 COPY --from=builder /app/gitwatcher /app/gitwatcher
 
 ENV REPOSITORY_PATH=/repo
-ENV CRON="* */5 * * * *"
+ENV CRON="0 * * * * *"
 ENV PORT=8080
 
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD wget -qO- http://localhost:8080/api/jobs | grep -q '\[{' || exit 1
+
+USER gitwatcher
 
 CMD ["/app/gitwatcher"]

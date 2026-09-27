@@ -7,12 +7,15 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 )
 
-func RunWebhookIntegration(url string, token string) error {
+const webhookTimeout = 30 * time.Second
+
+func RunWebhookIntegration(ctx context.Context, url string, token string) error {
 	slog.Info("Triggering webhook", "url", url)
 
-	ctx := context.Background()
+	client := &http.Client{Timeout: webhookTimeout}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
 	if err != nil {
@@ -21,7 +24,7 @@ func RunWebhookIntegration(url string, token string) error {
 
 	req.Header.Set("Authorization", "Bearer "+token)
 
-	res, err := http.DefaultClient.Do(req)
+	res, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("execute webhook request: %w", err)
 	}
@@ -29,8 +32,12 @@ func RunWebhookIntegration(url string, token string) error {
 		_ = body.Close()
 	}(res.Body)
 
+	body, err := io.ReadAll(io.LimitReader(res.Body, 1024))
+	if err != nil {
+		return fmt.Errorf("read webhook response body: %w", err)
+	}
+
 	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
-		body, _ := io.ReadAll(io.LimitReader(res.Body, 1024))
 		return fmt.Errorf("webhook returned %d: %s", res.StatusCode, strings.TrimSpace(string(body)))
 	}
 

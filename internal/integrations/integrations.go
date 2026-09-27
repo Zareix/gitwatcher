@@ -1,22 +1,26 @@
 package integrations
 
 import (
-	"gitwatcher/internal/config"
+	"context"
+	"errors"
+	"fmt"
 	"log/slog"
+
+	"gitwatcher/internal/config"
 )
 
-func TriggerAllIntegrations(cfg config.Config) {
-	slog.Info("Triggering integrations")
+func TriggerOnPull(ctx context.Context, cfg config.Config) {
+	slog.Info("Triggering integrations after pull")
 
-	if cfg.IntegrationArcaneUrl != "" && cfg.IntegrationArcaneToken != "" && cfg.IntegrationArcaneEnvId != "" {
-		if err := RunArcaneIntegration(cfg.IntegrationArcaneUrl, cfg.IntegrationArcaneToken, cfg.IntegrationArcaneEnvId, cfg.IntegrationArcaneSkipNames); err != nil {
-			slog.Error("Arcane integration failed", "error", err)
+	var errs []error
+
+	if cfg.IntegrationWebhookUrl != "" && cfg.IntegrationWebhookToken != "" {
+		if err := RunWebhookIntegration(ctx, cfg.IntegrationWebhookUrl, cfg.IntegrationWebhookToken); err != nil {
+			errs = append(errs, fmt.Errorf("webhook: %w", err))
 		}
 	}
 
-	if cfg.IntegrationWebhookUrl != "" && cfg.IntegrationWebhookToken != "" {
-		if err := RunWebhookIntegration(cfg.IntegrationWebhookUrl, cfg.IntegrationWebhookToken); err != nil {
-			slog.Error("Webhook integration failed", "error", err)
-		}
+	if err := errors.Join(errs...); err != nil {
+		slog.Error("One or more integrations failed", "error", err)
 	}
 }

@@ -1,0 +1,11 @@
+.env
+.git
+.github
+.idea
+.claude
+bin
+output
+tmp
+*.md
+compose.yaml
+justfile

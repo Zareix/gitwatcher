@@ -26,6 +26,12 @@ jobs:
         with:
           just-version: ${{ env.JUST_VERSION }}
 
+      - name: Lint
+        run: go vet ./...
+
+      - name: Test
+        run: go test -race -timeout 5m ./...
+
       - name: Build
         run: just build
 

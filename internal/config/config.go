@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"strconv"
@@ -28,11 +29,6 @@ type Config struct {
 	AuthUser     string
 	AuthPassword string
 
-	IntegrationArcaneUrl       string
-	IntegrationArcaneToken     string
-	IntegrationArcaneEnvId     string
-	IntegrationArcaneSkipNames []string
-
 	IntegrationWebhookUrl   string
 	IntegrationWebhookToken string
 
@@ -43,74 +39,71 @@ type Config struct {
 	DivergencePolicy string
 }
 
-func LoadConfig() Config {
+func LoadConfig() (Config, error) {
 	_ = godotenv.Load()
 
-	logJson := os.Getenv("LOG_JSON")
-	if strings.ToLower(logJson) == "true" {
+	if strings.ToLower(os.Getenv("LOG_JSON")) == "true" {
 		slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 	}
 
-	repositoryPath, exists := os.LookupEnv("REPOSITORY_PATH")
-	if !exists {
+	repositoryPath := os.Getenv("REPOSITORY_PATH")
+	if repositoryPath == "" {
 		repositoryPath = "./output"
 	}
 
-	portEnv := os.Getenv("PORT")
-	if portEnv == "" {
-		portEnv = "8080"
-	}
-	port, err := strconv.Atoi(portEnv)
-	if err != nil {
-		slog.Error("Invalid PORT value, must be an integer", "error", err)
-		os.Exit(1)
+	port := 8080
+	if portEnv := os.Getenv("PORT"); portEnv != "" {
+		parsed, err := strconv.Atoi(portEnv)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid PORT value %q, must be an integer: %w", portEnv, err)
+		}
+		port = parsed
 	}
 
-	cronSchedule, exists := os.LookupEnv("CRON")
-	if !exists {
+	cronSchedule := os.Getenv("CRON")
+	if cronSchedule == "" {
 		cronSchedule = "0 */1 * * * *"
 	}
 
-	authType, exists := os.LookupEnv("AUTH_TYPE")
-	if !exists || authType == "" {
+	authType := os.Getenv("AUTH_TYPE")
+	if authType == "" {
 		authType = AuthTypeNone
 	}
 
-	commitName, exists := os.LookupEnv("COMMIT_NAME")
-	if !exists || commitName == "" {
+	commitName := os.Getenv("COMMIT_NAME")
+	if commitName == "" {
 		commitName = "gitwatcher"
 	}
 
-	commitEmail, exists := os.LookupEnv("COMMIT_EMAIL")
-	if !exists || commitEmail == "" {
+	commitEmail := os.Getenv("COMMIT_EMAIL")
+	if commitEmail == "" {
 		commitEmail = "gitwatcher@local"
 	}
 
-	defaultCommitMessage := "chore: sync changes from gitwatcher"
 	commitMessage := strings.TrimSpace(os.Getenv("COMMIT_MESSAGE"))
 	if commitMessage == "" {
-		commitMessage = defaultCommitMessage
+		commitMessage = "chore: sync changes from gitwatcher"
 	}
 
 	divergencePolicy := strings.ToLower(strings.TrimSpace(os.Getenv("DIVERGENCE_POLICY")))
-	if divergencePolicy == "" {
+	switch divergencePolicy {
+	case "":
 		divergencePolicy = DivergencePolicyManual
-	}
-	if divergencePolicy != DivergencePolicyManual && divergencePolicy != DivergencePolicyRebase {
-		slog.Warn("Invalid DIVERGENCE_POLICY value, falling back to manual", "value", divergencePolicy)
-		divergencePolicy = DivergencePolicyManual
+	case DivergencePolicyManual, DivergencePolicyRebase:
+	default:
+		return Config{}, fmt.Errorf("invalid DIVERGENCE_POLICY %q, expected %q or %q", divergencePolicy, DivergencePolicyManual, DivergencePolicyRebase)
 	}
 
-	arcaneSkipNames := parseCommaSeparatedEnv("INTEGRATION_ARCANE_SKIP_NAMES")
-
-	jobUUID, err := uuid.NewUUID()
+	jobUUID, err := uuid.NewRandom()
 	if err != nil {
-		slog.Error("Failed to generate job UUID", "error", err)
-		os.Exit(1)
+		return Config{}, fmt.Errorf("generate job UUID: %w", err)
 	}
-	jobUUIDEnv, exists := os.LookupEnv("JOB_UUID")
-	if exists {
-		jobUUID = uuid.MustParse(jobUUIDEnv)
+	if jobUUIDEnv := os.Getenv("JOB_UUID"); jobUUIDEnv != "" {
+		parsed, err := uuid.Parse(jobUUIDEnv)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid JOB_UUID value %q: %w", jobUUIDEnv, err)
+		}
+		jobUUID = parsed
 	}
 
 	return Config{
@@ -123,11 +116,6 @@ func LoadConfig() Config {
 		AuthUser:     os.Getenv("AUTH_USER"),
 		AuthPassword: os.Getenv("AUTH_PASSWORD"),
 
-		IntegrationArcaneUrl:       os.Getenv("INTEGRATION_ARCANE_URL"),
-		IntegrationArcaneToken:     os.Getenv("INTEGRATION_ARCANE_TOKEN"),
-		IntegrationArcaneEnvId:     os.Getenv("INTEGRATION_ARCANE_ENV_ID"),
-		IntegrationArcaneSkipNames: arcaneSkipNames,
-
 		IntegrationWebhookUrl:   os.Getenv("INTEGRATION_WEBHOOK_URL"),
 		IntegrationWebhookToken: os.Getenv("INTEGRATION_WEBHOOK_TOKEN"),
 
@@ -136,33 +124,5 @@ func LoadConfig() Config {
 		CommitMessage: commitMessage,
 
 		DivergencePolicy: divergencePolicy,
-	}
-}
-
-func parseCommaSeparatedEnv(key string) []string {
-	raw := os.Getenv(key)
-	if strings.TrimSpace(raw) == "" {
-		return nil
-	}
-
-	parts := strings.Split(raw, ",")
-	values := make([]string, 0, len(parts))
-	seen := make(map[string]struct{}, len(parts))
-	for _, part := range parts {
-		name := strings.ToLower(strings.TrimSpace(part))
-		if name == "" {
-			continue
-		}
-		if _, exists := seen[name]; exists {
-			continue
-		}
-		seen[name] = struct{}{}
-		values = append(values, name)
-	}
-
-	if len(values) == 0 {
-		return nil
-	}
-
-	return values
+	}, nil
 }
