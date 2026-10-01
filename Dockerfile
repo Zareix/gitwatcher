@@ -11,7 +11,7 @@ COPY . .
 RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /app/gitwatcher ./cmd/gitwatcher
 
 
-FROM alpine:3.24.1 AS runner
+FROM alpine:3.24.2 AS runner
 
 RUN apk add --no-cache git ca-certificates \
     && addgroup -S gitwatcher \
